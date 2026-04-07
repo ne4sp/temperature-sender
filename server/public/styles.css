@@ -1,0 +1,153 @@
+:root {
+  --bg: #0b1220;
+  --card: rgba(255, 255, 255, 0.06);
+  --card2: rgba(255, 255, 255, 0.08);
+  --text: rgba(255, 255, 255, 0.92);
+  --muted: rgba(255, 255, 255, 0.65);
+  --accent: #7c3aed;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --bad: #ef4444;
+  --border: rgba(255, 255, 255, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  color: var(--text);
+  background: radial-gradient(1200px 600px at 20% -10%, rgba(124, 58, 237, 0.55), transparent 60%),
+    radial-gradient(900px 500px at 80% 10%, rgba(34, 197, 94, 0.25), transparent 55%),
+    radial-gradient(800px 450px at 50% 110%, rgba(59, 130, 246, 0.22), transparent 60%), var(--bg);
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 28px 18px 40px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+h1 {
+  margin: 0;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+}
+
+.sub {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.badge {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 650;
+  text-transform: lowercase;
+}
+.badge.ok {
+  border-color: rgba(34, 197, 94, 0.45);
+  background: rgba(34, 197, 94, 0.14);
+}
+.badge.warn {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.12);
+}
+.badge.bad {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.card {
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--card), rgba(255, 255, 255, 0.03));
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(10px);
+}
+
+.chartCard {
+  padding: 14px 16px 18px;
+  margin-bottom: 12px;
+}
+
+.label {
+  color: var(--muted);
+  font-weight: 650;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.value {
+  font-size: 38px;
+  font-weight: 800;
+  margin-top: 8px;
+  letter-spacing: -0.03em;
+}
+
+.hint {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.chartWrap {
+  margin-top: 10px;
+  position: relative;
+  width: 100%;
+  height: 380px;
+}
+
+.chartWrap canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.code {
+  white-space: pre-wrap;
+  margin: 10px 0 0;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.25);
+  color: rgba(255, 255, 255, 0.9);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+  .chartWrap {
+    height: 320px;
+  }
+}
+
