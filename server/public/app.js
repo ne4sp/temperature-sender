@@ -31,77 +31,77 @@ function fmtHum(h) {
   return `${v.toFixed(1)}%`;
 }
 
-const ctx = document.getElementById("chart");
-const chart = new Chart(ctx, {
-  type: "line",
-  data: {
-    labels: [],
-    datasets: [
-      {
-        label: "Температура, °C",
-        data: [],
-        tension: 0.25,
-        borderWidth: 2,
-        pointRadius: 0,
-        borderColor: "rgba(124, 58, 237, 1)",
-        backgroundColor: "rgba(124, 58, 237, 0.18)",
-        fill: true,
-      },
-      {
-        label: "Влажность, %",
-        data: [],
-        tension: 0.25,
-        borderWidth: 2,
-        pointRadius: 0,
-        borderColor: "rgba(34, 197, 94, 1)",
-        backgroundColor: "rgba(34, 197, 94, 0.10)",
-        fill: false,
-        yAxisID: "y1",
-      },
-    ],
-  },
-  options: {
-    responsive: true,
-    animation: false,
-    maintainAspectRatio: false,
-    interaction: { mode: "index", intersect: false },
-    plugins: {
-      legend: { display: true },
-      tooltip: {
-        callbacks: {
-          label: (ctx2) => {
-            if (ctx2.datasetIndex === 0) return ` ${fmtTemp(ctx2.parsed.y)}`;
-            return ` ${fmtHum(ctx2.parsed.y)}`;
+function makeLineChart(canvas, label, color, formatter) {
+  return new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label,
+          data: [],
+          tension: 0.38,
+          cubicInterpolationMode: "monotone",
+          borderWidth: 2,
+          pointRadius: 0,
+          borderColor: color,
+          backgroundColor: "rgba(255, 255, 255, 0)",
+          fill: false,
+          spanGaps: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      animation: false,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: true },
+        tooltip: {
+          callbacks: {
+            label: (ctx2) => ` ${formatter(ctx2.parsed.y)}`,
           },
         },
       },
-    },
-    scales: {
-      x: {
-        ticks: { maxTicksLimit: 6, color: "rgba(255,255,255,0.65)" },
-        grid: { color: "rgba(255,255,255,0.08)" },
-      },
-      y: {
-        ticks: { color: "rgba(255,255,255,0.65)" },
-        grid: { color: "rgba(255,255,255,0.08)" },
-      },
-      y1: {
-        position: "right",
-        ticks: { color: "rgba(255,255,255,0.65)" },
-        grid: { drawOnChartArea: false },
+      scales: {
+        x: {
+          ticks: { maxTicksLimit: 6, color: "rgba(255,255,255,0.65)" },
+          grid: { color: "rgba(255,255,255,0.08)" },
+        },
+        y: {
+          ticks: { color: "rgba(255,255,255,0.65)" },
+          grid: { color: "rgba(255,255,255,0.08)" },
+        },
       },
     },
-  },
-});
+  });
+}
+
+const tempChart = makeLineChart(
+  document.getElementById("tempChart"),
+  "Температура, °C",
+  "rgba(124, 58, 237, 1)",
+  fmtTemp
+);
+const humChart = makeLineChart(
+  document.getElementById("humChart"),
+  "Влажность, %",
+  "rgba(34, 197, 94, 1)",
+  fmtHum
+);
 
 function applyHistory(points) {
   const labels = points.map((p) => new Date(p.ts).toLocaleTimeString());
   const temp = points.map((p) => p.celsius);
   const hum = points.map((p) => (typeof p.humidity === "number" ? p.humidity : null));
-  chart.data.labels = labels;
-  chart.data.datasets[0].data = temp;
-  chart.data.datasets[1].data = hum;
-  chart.update();
+  tempChart.data.labels = labels;
+  tempChart.data.datasets[0].data = temp;
+  tempChart.update();
+
+  humChart.data.labels = labels;
+  humChart.data.datasets[0].data = hum;
+  humChart.update();
 
   els.pointsCount.textContent = String(points.length);
   if (points.length) {
@@ -118,19 +118,25 @@ function applyHistory(points) {
 
 function appendPoint(point) {
   const label = new Date(point.ts).toLocaleTimeString();
-  chart.data.labels.push(label);
-  chart.data.datasets[0].data.push(point.celsius);
-  chart.data.datasets[1].data.push(typeof point.humidity === "number" ? point.humidity : null);
+  tempChart.data.labels.push(label);
+  tempChart.data.datasets[0].data.push(point.celsius);
+
+  humChart.data.labels.push(label);
+  humChart.data.datasets[0].data.push(typeof point.humidity === "number" ? point.humidity : null);
 
   const MAX = 1000;
-  while (chart.data.labels.length > MAX) {
-    chart.data.labels.shift();
-    chart.data.datasets[0].data.shift();
-    chart.data.datasets[1].data.shift();
+  while (tempChart.data.labels.length > MAX) {
+    tempChart.data.labels.shift();
+    tempChart.data.datasets[0].data.shift();
+  }
+  while (humChart.data.labels.length > MAX) {
+    humChart.data.labels.shift();
+    humChart.data.datasets[0].data.shift();
   }
 
-  chart.update();
-  els.pointsCount.textContent = String(chart.data.labels.length);
+  tempChart.update();
+  humChart.update();
+  els.pointsCount.textContent = String(tempChart.data.labels.length);
   els.currentValue.textContent = fmtTemp(point.celsius);
   els.currentMeta.textContent = `${fmtTime(point.ts)}${point.deviceId ? ` • ${point.deviceId}` : ""}`;
   if (typeof point.humidity === "number") {

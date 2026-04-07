@@ -15,6 +15,9 @@ SERVER_URL = "http://192.168.0.10:8080/api/temperature"
 
 DEVICE_ID = "esp32-dht11-01"
 
+# If you set API_KEY on the server, put the same value here (or leave empty).
+API_KEY = ""
+
 # GPIO number where DHT11 DATA pin is connected
 DHT_PIN = 15
 
@@ -52,6 +55,8 @@ def post_measurement(celsius, humidity):
         "deviceId": DEVICE_ID,
     }
     headers = {"Content-Type": "application/json"}
+    if API_KEY:
+        headers["x-api-key"] = API_KEY
     resp = None
     try:
         resp = urequests.post(
