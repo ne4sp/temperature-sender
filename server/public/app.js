@@ -180,7 +180,11 @@ async function loadWeather() {
     if (!data.ok) {
       els.weatherTemp.textContent = "—";
       els.weatherDesc.textContent = data.error || "Недоступно";
-      els.weatherMeta.textContent = "Задайте WEATHER_LAT и WEATHER_LON на сервере";
+      const err = String(data.error || "");
+      const needsCoords = /WEATHER_(LAT|LON)|not configured/i.test(err);
+      els.weatherMeta.textContent = needsCoords
+        ? "Задайте WEATHER_LAT и WEATHER_LON на сервере"
+        : "";
       return;
     }
     els.weatherTemp.textContent = fmtTemp(data.temperatureC);

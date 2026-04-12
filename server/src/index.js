@@ -1,6 +1,7 @@
 const path = require("path");
 const fs = require("fs").promises;
 const http = require("http");
+const https = require("https");
 const express = require("express");
 const { WebSocketServer } = require("ws");
 
@@ -116,6 +117,44 @@ function weatherCodeToRu(code) {
 
 let weatherCache = { at: 0, payload: null };
 
+/** @param {string} urlString */
+function httpsGetJson(urlString) {
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      urlString,
+      {
+        method: "GET",
+        headers: { "User-Agent": "temperature-sender/1.0" },
+      },
+      (incoming) => {
+        let body = "";
+        incoming.setEncoding("utf8");
+        incoming.on("data", (chunk) => {
+          body += chunk;
+        });
+        incoming.on("end", () => {
+          const code = incoming.statusCode || 0;
+          if (code < 200 || code >= 300) {
+            reject(new Error(`Open-Meteo HTTP ${code}`));
+            return;
+          }
+          try {
+            resolve(JSON.parse(body));
+          } catch (e) {
+            reject(e);
+          }
+        });
+      }
+    );
+    req.on("error", reject);
+    req.setTimeout(20_000, () => {
+      req.destroy();
+      reject(new Error("Open-Meteo request timeout"));
+    });
+    req.end();
+  });
+}
+
 const app = express();
 app.disable("x-powered-by");
 app.use(express.json({ limit: "50kb" }));
@@ -176,11 +215,7 @@ app.get("/api/weather", async (req, res) => {
         timezone: "auto",
       }).toString();
 
-    const r = await fetch(url);
-    if (!r.ok) {
-      return res.status(502).json({ ok: false, error: `Open-Meteo HTTP ${r.status}` });
-    }
-    const j = await r.json();
+    const j = await httpsGetJson(url);
     const cur = j.current;
     if (!cur) {
       return res.status(502).json({ ok: false, error: "Open-Meteo: no current block" });
