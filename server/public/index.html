@@ -6,6 +6,13 @@
     <title>Температура</title>
     <link rel="stylesheet" href="/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="/vendor/hammer.min.js"></script>
+    <script src="/vendor/chartjs-plugin-zoom.min.js"></script>
+    <script>
+      if (typeof Chart !== "undefined" && typeof ChartZoom !== "undefined") {
+        Chart.register(ChartZoom);
+      }
+    </script>
   </head>
   <body>
     <main class="container">
@@ -26,17 +33,19 @@
         <div class="card">
           <div class="label">Влажность</div>
           <div class="value" id="currentHumidity">—</div>
-          <div class="hint">Если датчик её отправляет</div>
+          <div class="hint">По датчику в помещении</div>
         </div>
         <div class="card">
-          <div class="label">Точек в истории</div>
-          <div class="value" id="pointsCount">0</div>
-          <div class="hint">Ограничение на сервере: <span id="limitHint">1000</span></div>
+          <div class="label">На улице (Open‑Meteo)</div>
+          <div class="value" id="weatherTemp">—</div>
+          <div class="hint" id="weatherDesc">—</div>
+          <div class="hint mutedSmall" id="weatherMeta">—</div>
         </div>
       </section>
 
       <section class="card chartCard">
         <div class="label">Температура</div>
+        <div class="chartHint">Колёсико — масштаб по времени, перетаскивание — сдвиг</div>
         <div class="chartWrap">
           <canvas id="tempChart"></canvas>
         </div>
@@ -44,6 +53,7 @@
 
       <section class="card chartCard">
         <div class="label">Влажность</div>
+        <div class="chartHint">Колёсико — масштаб по времени, перетаскивание — сдвиг</div>
         <div class="chartWrap">
           <canvas id="humChart"></canvas>
         </div>

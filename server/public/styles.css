@@ -93,6 +93,18 @@ h1 {
   margin-bottom: 12px;
 }
 
+.chartHint {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+}
+
+.mutedSmall {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
 .label {
   color: var(--muted);
   font-weight: 650;

@@ -1,13 +1,14 @@
-/* global Chart */
+/* global Chart, ChartZoom */
 
 const els = {
   statusBadge: document.getElementById("statusBadge"),
   currentValue: document.getElementById("currentValue"),
   currentHumidity: document.getElementById("currentHumidity"),
   currentMeta: document.getElementById("currentMeta"),
-  pointsCount: document.getElementById("pointsCount"),
-  limitHint: document.getElementById("limitHint"),
   exampleCurl: document.getElementById("exampleCurl"),
+  weatherTemp: document.getElementById("weatherTemp"),
+  weatherDesc: document.getElementById("weatherDesc"),
+  weatherMeta: document.getElementById("weatherMeta"),
 };
 
 function setBadge(state, text) {
@@ -31,6 +32,8 @@ function fmtHum(h) {
   return `${v.toFixed(1)}%`;
 }
 
+const zoomPluginOk = typeof Chart !== "undefined" && typeof ChartZoom !== "undefined";
+
 function makeLineChart(canvas, label, color, formatter) {
   return new Chart(canvas, {
     type: "line",
@@ -44,6 +47,10 @@ function makeLineChart(canvas, label, color, formatter) {
           cubicInterpolationMode: "monotone",
           borderWidth: 2,
           pointRadius: 0,
+          pointHoverRadius: 6,
+          pointHoverBorderWidth: 2,
+          pointHoverBackgroundColor: color,
+          pointHoverBorderColor: "rgba(255,255,255,0.95)",
           borderColor: color,
           backgroundColor: "rgba(255, 255, 255, 0)",
           fill: false,
@@ -55,21 +62,41 @@ function makeLineChart(canvas, label, color, formatter) {
       responsive: true,
       animation: false,
       maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
+      interaction: { mode: "nearest", intersect: false, axis: "x" },
+      hover: { mode: "nearest", intersect: false },
       plugins: {
         legend: { display: true },
         tooltip: {
+          intersect: false,
           callbacks: {
-            label: (ctx2) => ` ${formatter(ctx2.parsed.y)}`,
+            label: (ctx2) => {
+              const y = ctx2.parsed.y;
+              if (y === null || y === undefined || Number.isNaN(y)) return " —";
+              return ` ${formatter(y)}`;
+            },
           },
         },
+        ...(zoomPluginOk
+          ? {
+              zoom: {
+                pan: { enabled: true, mode: "x" },
+                zoom: {
+                  wheel: { enabled: true },
+                  pinch: { enabled: true },
+                  mode: "x",
+                },
+              },
+            }
+          : {}),
       },
       scales: {
         x: {
-          ticks: { maxTicksLimit: 6, color: "rgba(255,255,255,0.65)" },
+          ticks: { maxTicksLimit: 8, color: "rgba(255,255,255,0.65)" },
           grid: { color: "rgba(255,255,255,0.08)" },
         },
         y: {
+          grace: "12%",
+          beginAtZero: false,
           ticks: { color: "rgba(255,255,255,0.65)" },
           grid: { color: "rgba(255,255,255,0.08)" },
         },
@@ -81,29 +108,41 @@ function makeLineChart(canvas, label, color, formatter) {
 const tempChart = makeLineChart(
   document.getElementById("tempChart"),
   "Температура, °C",
-  "rgba(124, 58, 237, 1)",
+  "rgba(96, 165, 250, 1)",
   fmtTemp
 );
 const humChart = makeLineChart(
   document.getElementById("humChart"),
   "Влажность, %",
-  "rgba(34, 197, 94, 1)",
+  "rgba(147, 197, 253, 1)",
   fmtHum
 );
+
+function setSeries(chart, labels, data) {
+  chart.data.labels = labels;
+  chart.data.datasets[0].data = data;
+  chart.update();
+}
+
+function pushPoint(chart, label, value, maxPoints) {
+  chart.data.labels.push(label);
+  chart.data.datasets[0].data.push(value);
+  while (chart.data.labels.length > maxPoints) {
+    chart.data.labels.shift();
+    chart.data.datasets[0].data.shift();
+  }
+  chart.update();
+}
+
+const MAX_POINTS = 1000;
 
 function applyHistory(points) {
   const labels = points.map((p) => new Date(p.ts).toLocaleTimeString());
   const temp = points.map((p) => p.celsius);
   const hum = points.map((p) => (typeof p.humidity === "number" ? p.humidity : null));
-  tempChart.data.labels = labels;
-  tempChart.data.datasets[0].data = temp;
-  tempChart.update();
+  setSeries(tempChart, labels, temp);
+  setSeries(humChart, labels, hum);
 
-  humChart.data.labels = labels;
-  humChart.data.datasets[0].data = hum;
-  humChart.update();
-
-  els.pointsCount.textContent = String(points.length);
   if (points.length) {
     const last = points[points.length - 1];
     els.currentValue.textContent = fmtTemp(last.celsius);
@@ -118,25 +157,9 @@ function applyHistory(points) {
 
 function appendPoint(point) {
   const label = new Date(point.ts).toLocaleTimeString();
-  tempChart.data.labels.push(label);
-  tempChart.data.datasets[0].data.push(point.celsius);
+  pushPoint(tempChart, label, point.celsius, MAX_POINTS);
+  pushPoint(humChart, label, typeof point.humidity === "number" ? point.humidity : null, MAX_POINTS);
 
-  humChart.data.labels.push(label);
-  humChart.data.datasets[0].data.push(typeof point.humidity === "number" ? point.humidity : null);
-
-  const MAX = 1000;
-  while (tempChart.data.labels.length > MAX) {
-    tempChart.data.labels.shift();
-    tempChart.data.datasets[0].data.shift();
-  }
-  while (humChart.data.labels.length > MAX) {
-    humChart.data.labels.shift();
-    humChart.data.datasets[0].data.shift();
-  }
-
-  tempChart.update();
-  humChart.update();
-  els.pointsCount.textContent = String(tempChart.data.labels.length);
   els.currentValue.textContent = fmtTemp(point.celsius);
   els.currentMeta.textContent = `${fmtTime(point.ts)}${point.deviceId ? ` • ${point.deviceId}` : ""}`;
   if (typeof point.humidity === "number") {
@@ -148,6 +171,29 @@ async function loadInitial() {
   const res = await fetch("/api/history");
   const data = await res.json();
   applyHistory(data.points || []);
+}
+
+async function loadWeather() {
+  try {
+    const res = await fetch("/api/weather");
+    const data = await res.json();
+    if (!data.ok) {
+      els.weatherTemp.textContent = "—";
+      els.weatherDesc.textContent = data.error || "Недоступно";
+      els.weatherMeta.textContent = "Задайте WEATHER_LAT и WEATHER_LON на сервере";
+      return;
+    }
+    els.weatherTemp.textContent = fmtTemp(data.temperatureC);
+    const hum =
+      typeof data.humidity === "number" ? ` • влажность ${fmtHum(data.humidity)}` : "";
+    els.weatherDesc.textContent = `${data.description || "Погода"}${hum}`;
+    const cache = data.cached ? "кэш" : "свежие данные";
+    els.weatherMeta.textContent = `${data.source || "Open-Meteo"} • ${cache}${data.time ? ` • ${data.time}` : ""}`;
+  } catch {
+    els.weatherTemp.textContent = "—";
+    els.weatherDesc.textContent = "Ошибка запроса";
+    els.weatherMeta.textContent = "";
+  }
 }
 
 function wsUrl() {
@@ -204,11 +250,13 @@ function connectWs() {
 
 setCurlExample();
 loadInitial().catch(() => {});
+loadWeather().catch(() => {});
 connectWs();
+
+setInterval(() => loadWeather().catch(() => {}), 15 * 60 * 1000);
 
 setInterval(() => {
   if (!lastMsgAt) return;
   const age = Date.now() - lastMsgAt;
   if (age > 15000) setBadge("warn", "stale");
 }, 1000);
-
